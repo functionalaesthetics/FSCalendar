@@ -36,16 +36,57 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         if UIDevice.current.model.hasPrefix("iPad") {
             self.calendarHeightConstraint.constant = 400
         }
-        
-        self.calendar.select(Date())
-        
+
+        let navbarColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
+
+        tableView.backgroundColor = navbarColor
+        view.backgroundColor = navbarColor
+
+        navigationController?.navigationBar.shadowImage = UIImage()
+        navigationController?.navigationBar.setBackgroundImage(UIImage(color: navbarColor)!, for: .default)
+
+
+
+        let borderView = UIView()
+        borderView.backgroundColor = UIColor(red: 220/255, green: 220/255, blue: 220/255, alpha: 1)
+        borderView.translatesAutoresizingMaskIntoConstraints = false
+        self.calendar.calendarWeekdayView.addSubview(borderView)
+
+        NSLayoutConstraint.activate([
+            borderView.leadingAnchor.constraint(equalTo: self.calendar.calendarWeekdayView.leadingAnchor),
+            borderView.trailingAnchor.constraint(equalTo: self.calendar.calendarWeekdayView.trailingAnchor),
+            borderView.bottomAnchor.constraint(equalTo: self.calendar.calendarWeekdayView.bottomAnchor),
+            borderView.heightAnchor.constraint(equalToConstant: 1),
+        ])
+
         self.view.addGestureRecognizer(self.scopeGesture)
         self.tableView.panGestureRecognizer.require(toFail: self.scopeGesture)
+        self.tableView.rowHeight = UITableViewAutomaticDimension
+        self.tableView.estimatedRowHeight = 55
+        self.tableView.register(ImageTableViewCell.self, forCellReuseIdentifier: "Cell")
+
+
+        self.calendar.headerHeight = 0
+        self.calendar.weekdayHeight = 40
+        self.calendar.calendarWeekdayView.backgroundColor = navbarColor
         self.calendar.scope = .week
-        
+        self.calendar.placeholderType = .none
+        self.calendar.firstWeekday = 2
+
+        self.calendar.appearance.caseOptions = .weekdayUsesUpperCase
+        self.calendar.appearance.weekdayFont = UIFont.systemFont(ofSize: 12, weight: UIFont.Weight.semibold)
+        self.calendar.appearance.weekdayTextColor = .gray
+        self.calendar.appearance.selectionColor = UIColor(red: 1, green: 91/255, blue: 0, alpha: 1)
+        self.calendar.appearance.todayColor = UIColor(red: 239/255, green: 239/255, blue: 244/255, alpha: 1)
+        self.calendar.appearance.titleTodayColor = .black
+        self.calendar.appearance.titleSelectionColor = .white
+        self.calendar.appearance.titleDefaultColor = .black
+        self.calendar.appearance.titleFont = UIFont.systemFont(ofSize: 16, weight: UIFont.Weight.regular)
+
         // For UITest
         self.calendar.accessibilityIdentifier = "calendar"
-        
+
+        self.title = monthDateFormatter.string(from: calendar.currentPage)
     }
     
     deinit {
@@ -82,7 +123,14 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         }
     }
 
+    private let monthDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter
+    }()
+
     func calendarCurrentPageDidChange(_ calendar: FSCalendar) {
+        title = monthDateFormatter.string(from: calendar.currentPage)
         print("\(self.dateFormatter.string(from: calendar.currentPage))")
     }
     
@@ -93,20 +141,19 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return [2,20][section]
+        return [2,10][section]
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") as! ImageTableViewCell
         if indexPath.section == 0 {
-            let identifier = ["cell_month", "cell_week"][indexPath.row]
-            let cell = tableView.dequeueReusableCell(withIdentifier: identifier)!
-            return cell
+            cell.fakeImageView.image = #imageLiteral(resourceName: "fullday")
         } else {
-            let cell = tableView.dequeueReusableCell(withIdentifier: "cell")!
-            return cell
+            cell.fakeImageView.image = #imageLiteral(resourceName: "event")
         }
+
+        return cell
     }
-    
     
     // MARK:- UITableViewDelegate
     
@@ -117,19 +164,56 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
             self.calendar.setScope(scope, animated: self.animationSwitch.isOn)
         }
     }
-    
-    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 10
+
+    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        return section == 0 ? "Ganztags" : "Tagsüber"
     }
     
     // MARK:- Target actions
     
     @IBAction func toggleClicked(sender: AnyObject) {
-        if self.calendar.scope == .month {
-            self.calendar.setScope(.week, animated: self.animationSwitch.isOn)
-        } else {
-            self.calendar.setScope(.month, animated: self.animationSwitch.isOn)
-        }
+        self.calendar.select(Date(timeInterval: 24*60*60*1200, since: calendar.currentPage))
+
+//        if self.calendar.scope == .month {
+//            self.calendar.setScope(.week, animated: self.animationSwitch.isOn)
+//        } else {
+//            self.calendar.setScope(.month, animated: self.animationSwitch.isOn)
+//        }
     }
-    
+}
+
+extension UIImage {
+    public convenience init?(color: UIColor, size: CGSize = CGSize(width: 1, height: 1)) {
+        let rect = CGRect(origin: .zero, size: size)
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 0.0)
+        color.setFill()
+        UIRectFill(rect)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+
+        guard let cgImage = image?.cgImage else { return nil }
+        self.init(cgImage: cgImage)
+    }
+}
+
+class ImageTableViewCell: UITableViewCell {
+    let fakeImageView = UIImageView()
+
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+
+        fakeImageView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(fakeImageView)
+
+        NSLayoutConstraint.activate([
+            fakeImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            fakeImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            fakeImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            fakeImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+        ])
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 }
