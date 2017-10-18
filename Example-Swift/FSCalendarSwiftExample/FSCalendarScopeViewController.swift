@@ -8,18 +8,19 @@
 
 import UIKit
 
-let navbarColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
-let lineWidth: CGFloat = 1 / UIScreen.main.scale
+private let navbarColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
+private let lineWidth: CGFloat = 1 / UIScreen.main.scale
+private let sectionHeaderReuseIdentifier = "CalendarSectionHeaderView"
 
 class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, FSCalendarDataSource, FSCalendarDelegate, UIGestureRecognizerDelegate {
     
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let calendar = FSCalendar()
     private var calendarHeightConstraint: NSLayoutConstraint!
-    
-    fileprivate lazy var dateFormatter: DateFormatter = {
+
+    private let monthDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy/MM/dd"
+        formatter.dateFormat = "MMMM yyyy"
         return formatter
     }()
 
@@ -46,6 +47,7 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         calendar.delegate = self
         calendar.dataSource = self
         calendar.translatesAutoresizingMaskIntoConstraints = false
+        calendar.backgroundColor = .white
         calendar.accessibilityIdentifier = "calendar" // For UITest
         calendar.headerHeight = 0
         calendar.weekdayHeight = 40
@@ -54,8 +56,8 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         calendar.placeholderType = .none
         calendar.firstWeekday = 2
 
-        calendar.backgroundColor = .white
         calendar.appearance.caseOptions = .weekdayUsesUpperCase
+        calendar.appearance.titleFont = UIFont.systemFont(ofSize: 16, weight: UIFont.Weight.regular)
         calendar.appearance.weekdayFont = UIFont.systemFont(ofSize: 12, weight: UIFont.Weight.semibold)
         calendar.appearance.weekdayTextColor = .gray
         calendar.appearance.selectionColor = UIColor(red: 1, green: 91/255, blue: 0, alpha: 1)
@@ -63,7 +65,6 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         calendar.appearance.titleTodayColor = .black
         calendar.appearance.titleSelectionColor = .white
         calendar.appearance.titleDefaultColor = .black
-        calendar.appearance.titleFont = UIFont.systemFont(ofSize: 16, weight: UIFont.Weight.regular)
 
         calendarHeightConstraint = calendar.heightAnchor.constraint(equalToConstant: 300)
 
@@ -99,12 +100,16 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         ]
 
         tableView.dataSource = self
+        tableView.delegate = self
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.backgroundColor = navbarColor
         tableView.panGestureRecognizer.require(toFail: scopeGesture)
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 55
+        tableView.sectionHeaderHeight = UITableViewAutomaticDimension
+        tableView.estimatedSectionHeaderHeight = 40
         tableView.register(ImageTableViewCell.self, forCellReuseIdentifier: "Cell")
+        tableView.register(CalendarSectionHeaderView.self, forHeaderFooterViewReuseIdentifier: sectionHeaderReuseIdentifier)
 
         view.addSubview(tableView)
 
@@ -148,25 +153,25 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         calendarHeightConstraint.constant = bounds.height
         view.layoutIfNeeded()
     }
-    
+
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy/MM/dd"
+        return formatter
+    }()
+
     func calendar(_ calendar: FSCalendar, didSelect date: Date, at monthPosition: FSCalendarMonthPosition) {
-        print("did select date \(self.dateFormatter.string(from: date))")
-        let selectedDates = calendar.selectedDates.map({self.dateFormatter.string(from: $0)})
+        print("did select date \(dateFormatter.string(from: date))")
+        let selectedDates = calendar.selectedDates.map({dateFormatter.string(from: $0)})
         print("selected dates is \(selectedDates)")
         if monthPosition == .next || monthPosition == .previous {
             calendar.setCurrentPage(date, animated: true)
         }
     }
 
-    private let monthDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter
-    }()
-
     func calendarCurrentPageDidChange(_ calendar: FSCalendar) {
         title = monthDateFormatter.string(from: calendar.currentPage)
-        print("\(self.dateFormatter.string(from: calendar.currentPage))")
+        print("\(dateFormatter.string(from: calendar.currentPage))")
     }
     
     // MARK:- UITableViewDataSource
@@ -189,27 +194,17 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
 
         return cell
     }
+
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let header = tableView.dequeueReusableHeaderFooterView(withIdentifier: sectionHeaderReuseIdentifier) as! CalendarSectionHeaderView
+        header.title = (section == 0 ? "Ganztags" : "Tagsüber").uppercased()
+        return header
+    }
     
     // MARK:- UITableViewDelegate
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-    }
-
-    func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return section == 0 ? "Ganztags" : "Tagsüber"
-    }
-    
-    // MARK:- Target actions
-    
-    @IBAction func toggleClicked(sender: AnyObject) {
-        self.calendar.select(Date(timeInterval: 24*60*60*1200, since: calendar.currentPage))
-
-//        if self.calendar.scope == .month {
-//            self.calendar.setScope(.week, animated: self.animationSwitch.isOn)
-//        } else {
-//            self.calendar.setScope(.month, animated: self.animationSwitch.isOn)
-//        }
     }
 }
 
@@ -244,6 +239,41 @@ class ImageTableViewCell: UITableViewCell {
         ])
     }
 
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+class CalendarSectionHeaderView: UITableViewHeaderFooterView {
+
+    var title: String? {
+        get {
+            return titleLabel.text
+        }
+        set {
+            titleLabel.text = newValue
+        }
+    }
+
+    private let titleLabel = UILabel()
+
+    override init(reuseIdentifier: String?) {
+        super.init(reuseIdentifier: reuseIdentifier)
+
+        contentView.backgroundColor = navbarColor
+
+        titleLabel.textColor = .black
+        titleLabel.font = UIFont.systemFont(ofSize: 15, weight: UIFont.Weight.regular)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 15),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -5)
+        ])
+    }
+    
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
