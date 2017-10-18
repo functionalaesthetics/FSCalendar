@@ -8,11 +8,11 @@
 
 import UIKit
 
-private let navbarColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
+let navbarColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
 private let lineWidth: CGFloat = 1 / UIScreen.main.scale
 private let sectionHeaderReuseIdentifier = "CalendarSectionHeaderView"
 
-class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, FSCalendarDataSource, FSCalendarDelegate, UIGestureRecognizerDelegate {
+class CalendarListViewController: UIViewController, UIGestureRecognizerDelegate {
     
     private let tableView = UITableView(frame: .zero, style: .plain)
     private let calendar = FSCalendar()
@@ -148,17 +148,23 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         }
         return shouldBegin
     }
-    
+}
+
+extension CalendarListViewController: FSCalendarDataSource {
+
+}
+
+private let dateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy/MM/dd"
+    return formatter
+}()
+
+extension CalendarListViewController: FSCalendarDelegate {
     func calendar(_ calendar: FSCalendar, boundingRectWillChange bounds: CGRect, animated: Bool) {
         calendarHeightConstraint.constant = bounds.height
         view.layoutIfNeeded()
     }
-
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy/MM/dd"
-        return formatter
-    }()
 
     func calendar(_ calendar: FSCalendar, didSelect date: Date, at monthPosition: FSCalendarMonthPosition) {
         print("did select date \(dateFormatter.string(from: date))")
@@ -173,17 +179,23 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         title = monthDateFormatter.string(from: calendar.currentPage)
         print("\(dateFormatter.string(from: calendar.currentPage))")
     }
-    
-    // MARK:- UITableViewDataSource
-    
+}
+
+extension CalendarListViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
+}
+
+extension CalendarListViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
         return 2
     }
-    
+
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return [2,10][section]
     }
-    
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") as! ImageTableViewCell
         if indexPath.section == 0 {
@@ -199,82 +211,5 @@ class FSCalendarScopeExampleViewController: UIViewController, UITableViewDataSou
         let header = tableView.dequeueReusableHeaderFooterView(withIdentifier: sectionHeaderReuseIdentifier) as! CalendarSectionHeaderView
         header.title = (section == 0 ? "Ganztags" : "Tagsüber").uppercased()
         return header
-    }
-    
-    // MARK:- UITableViewDelegate
-    
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-    }
-}
-
-extension UIImage {
-    public convenience init?(color: UIColor, size: CGSize = CGSize(width: 1, height: 1)) {
-        let rect = CGRect(origin: .zero, size: size)
-        UIGraphicsBeginImageContextWithOptions(rect.size, false, 0.0)
-        color.setFill()
-        UIRectFill(rect)
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        guard let cgImage = image?.cgImage else { return nil }
-        self.init(cgImage: cgImage)
-    }
-}
-
-class ImageTableViewCell: UITableViewCell {
-    let fakeImageView = UIImageView()
-
-    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-
-        fakeImageView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(fakeImageView)
-
-        NSLayoutConstraint.activate([
-            fakeImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            fakeImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            fakeImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            fakeImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-        ])
-    }
-
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-}
-
-class CalendarSectionHeaderView: UITableViewHeaderFooterView {
-
-    var title: String? {
-        get {
-            return titleLabel.text
-        }
-        set {
-            titleLabel.text = newValue
-        }
-    }
-
-    private let titleLabel = UILabel()
-
-    override init(reuseIdentifier: String?) {
-        super.init(reuseIdentifier: reuseIdentifier)
-
-        contentView.backgroundColor = navbarColor
-
-        titleLabel.textColor = .black
-        titleLabel.font = UIFont.systemFont(ofSize: 15, weight: UIFont.Weight.regular)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(titleLabel)
-        NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 15),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -5)
-        ])
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 }
