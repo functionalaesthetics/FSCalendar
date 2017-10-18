@@ -10,12 +10,11 @@ import UIKit
 
 let navbarColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1)
 private let lineWidth: CGFloat = 1 / UIScreen.main.scale
-private let sectionHeaderReuseIdentifier = "CalendarSectionHeaderView"
 
 class CalendarListViewController: UIViewController, UIGestureRecognizerDelegate {
     
-    private let tableView = UITableView(frame: .zero, style: .plain)
     private let calendar = FSCalendar()
+    private let dayPager = CalendarDayPager()
     private var calendarHeightConstraint: NSLayoutConstraint!
 
     private let monthDateFormatter: DateFormatter = {
@@ -99,28 +98,21 @@ class CalendarListViewController: UIViewController, UIGestureRecognizerDelegate 
             calendarBorderBottomView.heightAnchor.constraint(equalToConstant: lineWidth)
         ]
 
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.backgroundColor = navbarColor
-        tableView.panGestureRecognizer.require(toFail: scopeGesture)
-        tableView.rowHeight = UITableViewAutomaticDimension
-        tableView.estimatedRowHeight = 55
-        tableView.sectionHeaderHeight = UITableViewAutomaticDimension
-        tableView.estimatedSectionHeaderHeight = 40
-        tableView.register(ImageTableViewCell.self, forCellReuseIdentifier: "Cell")
-        tableView.register(CalendarSectionHeaderView.self, forHeaderFooterViewReuseIdentifier: sectionHeaderReuseIdentifier)
-
-        view.addSubview(tableView)
+        dayPager.delegate = self
+        dayPager.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(dayPager.view)
 
         constraints += [
-            tableView.topAnchor.constraint(equalTo: calendar.bottomAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            dayPager.view.topAnchor.constraint(equalTo: calendar.bottomAnchor),
+            dayPager.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            dayPager.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            dayPager.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ]
 
         NSLayoutConstraint.activate(constraints)
+
+        calendar.select(Date())
+        dayPager.currentDay = calendar.selectedDate
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -135,23 +127,29 @@ class CalendarListViewController: UIViewController, UIGestureRecognizerDelegate 
     
     // MARK:- UIGestureRecognizerDelegate
     
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        let shouldBegin = tableView.contentOffset.y <= -tableView.contentInset.top
-        if shouldBegin {
-            let velocity = scopeGesture.velocity(in: view)
-            switch calendar.scope {
-            case .month:
-                return velocity.y < 0
-            case .week:
-                return velocity.y > 0
-            }
-        }
-        return shouldBegin
-    }
+//    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+//        let shouldBegin = tableView.contentOffset.y <= -tableView.contentInset.top
+//        if shouldBegin {
+//            let velocity = scopeGesture.velocity(in: view)
+//            switch calendar.scope {
+//            case .month:
+//                return velocity.y < 0
+//            case .week:
+//                return velocity.y > 0
+//            }
+//        }
+//        return shouldBegin
+//    }
 }
 
 extension CalendarListViewController: FSCalendarDataSource {
 
+}
+
+extension CalendarListViewController: CalendarDayPagerDelegate {
+    func pagerDidSwitch(to day: Date) {
+        calendar.select(day)
+    }
 }
 
 private let dateFormatter: DateFormatter = {
@@ -178,38 +176,5 @@ extension CalendarListViewController: FSCalendarDelegate {
     func calendarCurrentPageDidChange(_ calendar: FSCalendar) {
         title = monthDateFormatter.string(from: calendar.currentPage)
         print("\(dateFormatter.string(from: calendar.currentPage))")
-    }
-}
-
-extension CalendarListViewController: UITableViewDelegate {
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-    }
-}
-
-extension CalendarListViewController: UITableViewDataSource {
-    func numberOfSections(in tableView: UITableView) -> Int {
-        return 2
-    }
-
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return [2,10][section]
-    }
-
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell") as! ImageTableViewCell
-        if indexPath.section == 0 {
-            cell.fakeImageView.image = #imageLiteral(resourceName: "fullday")
-        } else {
-            cell.fakeImageView.image = #imageLiteral(resourceName: "event")
-        }
-
-        return cell
-    }
-
-    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let header = tableView.dequeueReusableHeaderFooterView(withIdentifier: sectionHeaderReuseIdentifier) as! CalendarSectionHeaderView
-        header.title = (section == 0 ? "Ganztags" : "Tagsüber").uppercased()
-        return header
     }
 }
