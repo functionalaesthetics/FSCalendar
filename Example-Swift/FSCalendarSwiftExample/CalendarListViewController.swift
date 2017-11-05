@@ -112,7 +112,7 @@ class CalendarListViewController: UIViewController, UIGestureRecognizerDelegate 
         NSLayoutConstraint.activate(constraints)
 
         calendar.select(Date())
-        dayPager.currentDay = calendar.selectedDate
+        dayPager.currentDate = calendar.selectedDate
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -126,20 +126,27 @@ class CalendarListViewController: UIViewController, UIGestureRecognizerDelegate 
     }
     
     // MARK:- UIGestureRecognizerDelegate
-    
-//    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-//        let shouldBegin = tableView.contentOffset.y <= -tableView.contentInset.top
-//        if shouldBegin {
-//            let velocity = scopeGesture.velocity(in: view)
-//            switch calendar.scope {
-//            case .month:
-//                return velocity.y < 0
-//            case .week:
-//                return velocity.y > 0
-//            }
-//        }
-//        return shouldBegin
-//    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        let shouldBegin = dayPager.isOverScrolled
+//        dayPager.view.isUserInteractionEnabled = false
+        if shouldBegin {
+            let velocity = scopeGesture.velocity(in: view)
+            switch calendar.scope {
+            case .month:
+                return velocity.y < 0
+            case .week:
+                return velocity.y > 0
+            }
+        }
+        return shouldBegin
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        print(otherGestureRecognizer)
+        return true
+    }
 }
 
 extension CalendarListViewController: FSCalendarDataSource {
@@ -148,13 +155,19 @@ extension CalendarListViewController: FSCalendarDataSource {
 
 extension CalendarListViewController: CalendarDayPagerDelegate {
     func pagerDidSwitch(to day: Date) {
-        calendar.select(day)
+
+        // Do not remove. This fixes a weired animation bug if the calendar re-sizes due to a month change.
+        // Not sure why this works.
+        DispatchQueue.main.async {
+            self.calendar.select(day)
+        }
+
     }
 }
 
 private let dateFormatter: DateFormatter = {
     let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy/MM/dd"
+    formatter.dateFormat = "dd.MM.yyyy"
     return formatter
 }()
 

@@ -12,7 +12,15 @@ private let sectionHeaderReuseIdentifier = "CalendarSectionHeaderView"
 class EventListViewController: UIViewController {
 
     private let tableView = UITableView(frame: .zero, style: .plain)
+    var overScrollPanGestureRecognizer: UIPanGestureRecognizer? {
+        didSet {
+            guard let recognizer = overScrollPanGestureRecognizer else {
+                return
+            }
 
+            tableView.panGestureRecognizer.require(toFail: recognizer)
+        }
+    }
     var date: Date?
 
     override func viewDidLoad() {
@@ -22,7 +30,6 @@ class EventListViewController: UIViewController {
         tableView.delegate = self
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.backgroundColor = navbarColor
-//        tableView.panGestureRecognizer.require(toFail: scopeGesture)
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 55
         tableView.sectionHeaderHeight = UITableViewAutomaticDimension
@@ -71,6 +78,12 @@ extension EventListViewController: UITableViewDataSource {
         let header = tableView.dequeueReusableHeaderFooterView(withIdentifier: sectionHeaderReuseIdentifier) as! CalendarSectionHeaderView
         header.title = (section == 0 ? "Ganztags" : "Tagsüber").uppercased()
         return header
+    }
+}
+
+extension EventListViewController: OverScrollable {
+    var isOverScrolled: Bool {
+        return tableView.contentOffset.y <= -tableView.contentInset.top
     }
 }
 

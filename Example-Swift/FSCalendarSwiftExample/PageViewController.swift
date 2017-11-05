@@ -11,14 +11,14 @@ import UIKit
 public class CalendarDayPager: UIViewController {
     let pager = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal)
 
-    var currentDay: Date? {
+    var currentDate: Date? {
         didSet {
             // TODO: Calling currentDay twice. Fix this
             guard let currentPage = pager.viewControllers?.first as? EventListViewController else {
                 return
             }
 
-            currentPage.date = currentDay
+            currentPage.date = currentDate
         }
     }
     var delegate: CalendarDayPagerDelegate?
@@ -35,7 +35,7 @@ public class CalendarDayPager: UIViewController {
         pager.view.frame = view.bounds
 
         let startPage = EventListViewController()
-        startPage.date = currentDay
+        startPage.date = currentDate
         pager.setViewControllers([startPage], direction: .forward, animated: false, completion: nil)
     }
 }
@@ -78,11 +78,37 @@ extension CalendarDayPager: UIPageViewControllerDelegate {
             return
         }
 
-        currentDay = currentController.date
-        print(currentDay)
+        currentDate = currentController.date
+        print(currentDate)
 
-        guard let currentDay = currentDay else { return }
+        guard let currentDay = currentDate else { return }
         delegate?.pagerDidSwitch(to: currentDay)
+    }
+}
+
+extension CalendarDayPager: OverScrollable {
+    var isOverScrolled: Bool {
+        guard let currentController = pager.viewControllers?.first as? OverScrollable else {
+            return false
+        }
+
+        return currentController.isOverScrolled
+    }
+    var overScrollPanGestureRecognizer: UIPanGestureRecognizer? {
+        get {
+            guard let currentController = pager.viewControllers?.first as? OverScrollable else {
+                return nil
+            }
+
+            return currentController.overScrollPanGestureRecognizer
+        }
+        set {
+            guard var currentController = pager.viewControllers?.first as? OverScrollable else {
+                return
+            }
+
+            return currentController.overScrollPanGestureRecognizer = newValue
+        }
     }
 }
 
